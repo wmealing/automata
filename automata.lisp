@@ -6,7 +6,9 @@
 
 (defpackage :automata
   (:use :cl :cl-arrows)
-  (:export :main :read-db :parse-lines :filter-lines :sw-bus))
+  (:export :main :read-db :parse-lines :filter-lines :sw-bus
+   :select-by-function
+   ))
 
 (in-package #:automata)
 
@@ -24,26 +26,67 @@
   "remove any lines that start with !_"
   (remove-if #'sw-bus data-lines))
 
+(defun make-entry ( name file start end )
+  (list :func-name name :file file :start start :end end))
+
+(defun get-val (s)
+  (parse-integer
+   (first (last (str:split ":" s)))))
+
+(defun fix-val (v)
+  (- (get-val v) 1)
+  )
+
 (defun parse-lines (d)
   "Parse the line into more usable terms"
   (mapcar (lambda (arg)
-            (str:split #\Tab  arg  )) d))
+            (let ((sl (str:split #\Tab arg)))
+              (make-entry (first sl)
+                          (second sl)
+                          (fix-val (fifth sl))
+                          (get-val (seventh sl))
+                          )
+              )
+            )d))
 
-(parse-lines '("ONE" "TWO	DOG" "THREE"))
-(str:split #\Tab "ONE	TWO	THREE")
 
-(defun main ()
+(defun select-by-function (func-name db)
+  (format t "running~%")
+  (remove-if-not
+   #'(lambda (entry) (equal (getf entry :func-name) func-name)) db))
+
+
+(defun load-database ()
   (-<> "/Users/wmealing/Projects/automata/tests/tags"
        (read-db <>)
        (split-lines <>)
        (filter-lines <>)
        (parse-lines <>)
-       (print <>))
+       )
+  )
+
+(defun print-function-match-debug (match)
+  (format t "=========================== ~%" )
+  (format t "Function      : ~a ~%" (getf (first d) :func-name))
+  (format t "Starts at line: ~a ~%" (getf (first d) :start))
+  (format t "Ends at line  : ~a ~%" (getf (first d) :end))
+  (format t "=========================== ~%" )
+  )
+
+(defun extract-function (filename line-start line-end)
+  (let (( contents (str:lines (str:from-file filename)))
+        )
+    (subseq contents line-start line-end)
+    )
+  )
+
+(defun make-function-printable(contents)
+  (join #\Newline contents)  )
+
+(defun main ()
+;;;  (print (load-database ))
+  (setf d (select-by-function "another_one" (load-database)))
+  (print-function-match-debug d)
+  (format t "~a ~%" (make-function-printable (extract-function "tests/test.c" 6 10 )))
   T
   )
-
-(defun test-remove-if ()
-  (filter-lines '("ONE" "TWO" "THREE" "!_FOUR"))
-  )
-
-(print (test-remove-if ))
