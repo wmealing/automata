@@ -36,17 +36,18 @@
   )
 
 ;;; this function is NOT robust.
-(defun line-to-structure (line)
+(defun line-to-structure (line tagfile)
   "Takes a line and returns it back as a well formatted data structure"
-  ;;; (print "LINE TO STRUCTURE iS RUN")
+  (print tagfile)
   (if (not (starts-with-bang-underscore line))
       (let* ((elements (str:split #\Tab line))
              (func-name (first elements))
+             (tagfile-base (directory-namestring tagfile))
              (file-name (second elements))
+             (file-path (merge-pathnames (pathname file-name) tagfile-base))
              (start     (split-kv (fifth elements)) )
-             (end       (split-kv (seventh elements)))
-             )
-        (list :file file-name :func func-name :start start :end end))
+             (end       (split-kv (seventh elements))))
+        (list :file file-path :func func-name :start start :end end))
       ))
 
 (defun find-in-tags-file (tagfile func-name)
@@ -56,7 +57,7 @@
           while line do
             (if (eq T (line-matches line func-name))
                 (progn
-                  (return (line-to-structure line ))
+                  (return (line-to-structure line tagfile ))
                   )
                 )
           )))
@@ -80,22 +81,23 @@
     )
   )
 
+
 (defun print-function (f)
   (if (not (eq f nil) )
       (let* (
-         (file-name (getf f :file))
-         (line-start (getf f :start))
-         (line-end (getf f :end))
-         (func-data (extract-function file-name line-start line-end) )
-         )
-        (format t "== START SOURCE: ~a ==" file-name )
-        (format t "~%~a~%" (str:join #\Newline func-data))
-        (format t "== END SOURCE ==~%~%")
-        nil
+             (file-name (getf f :file))
+             (line-start (- (getf f :start) 1)) ;; indexing change.
+             (line-end  (getf f :end) ) ;; include the ending brace ?
+             (func-data (extract-function file-name line-start line-end))
+             )
+        (progn
+          (format t "~%== START SOURCE: ~a Lines: ~a-~a==" file-name line-start line-end )
+          (format t "~%~a~%" (str:join #\Newline func-data))
+          (format t "== END SOURCE ==~%~%")
+          )
         )
       (format t  "Function to print is nil? : ~a~% " f)
-      )
-  )
+      ))
 
 (defun print-all-functions (f)
   (format t "Looking for function: -= ~a =- ~%" f)
