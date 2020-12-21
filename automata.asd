@@ -8,3 +8,11 @@
   :serial t
   :components ((:file "package")
                (:file "automata")))
+
+
+(asdf:defsystem #:automata/tests
+  :depends-on (:automata :fiveam)
+  :components ((:module "tests"
+                :serial t
+                :components ((:file "package")
+                             (:file "main")))))
